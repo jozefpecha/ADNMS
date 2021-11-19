@@ -1,0 +1,61 @@
+#!/bin/bash
+#PBS -q qprod
+#PBS -N model_eval
+#PBS -A OPEN-23-32
+#PBS -l select=1:ncpus=128
+#PBS -l walltime=03:00:00
+#PBS -k oe
+
+source activate crem
+cd /home/pechjo00/evaluation/
+
+input_db=/scratch/project/open-21-41/pechjo00/crem_project/results/2BTR/test_run_356_01/res.db
+output_dir=/home/pechjo00/model_evaluation/2BTR/test_run_356_01
+ref_mol=/home/pechjo00/target_preparation/PDB_ligands/2BTR_ligand.pdb
+mkdir -p $output_dir
+
+# extract mols from db with visited_ids_count = max(visited_ids_count)
+sqlite3 $input_db < get_sdf.sql > $output_dir/out.sdf
+
+# check if out.sdf is empty
+if ! grep -q '[^[:space:]]' "$output_dir/out.sdf"; then
+	echo "Pharmacophore didn't match any starting fragments."
+	exit
+fi
+
+# split out.sdf according to number of features matched
+python split_sdf.py -i $output_dir/out.sdf -o $output_dir
+
+for dir in $output_dir/*/
+do
+	dir=${dir%*/}
+
+	python model_evaluation.py -i $dir/*.sdf -o $dir -r $ref_mol
+
+	python physchem_calc.py -i $dir/smiles.smi -o $dir/physchem_props.csv
+
+	python /home/pechjo00/evaluation/sa_scorer/sascorer_mp.py $dir/smiles.smi > $dir/sascores.csv
+
+	# will be replaced with python implenetation of docking
+	FILES=$dir/docking_results/pdb_files/*
+
+	for file in $FILES
+	do
+		output_file=$(basename $file .pdb)
+		/home/pechjo00/bin/mgltools_x86_64Linux2_1.5.6/bin/pythonsh /home/pechjo00/bin/mgltools_x86_64Linux2_1.5.6/MGLToolsPckgs/AutoDockTools/Utilities24/prepare_ligand4.py -l $file -A 'hydrogens' -o $dir/docking_results/pdbqt_files/${output_file}.pdbqt
+	done
+
+	FILES2=$dir/docking_results/pdbqt_files/*
+
+	for file in $FILES2
+	do
+		output_file=$(basename $file .pdbqt)
+		vina --config /home/pechjo00/evaluation/config.txt --ligand $file --out $dir/docking_results/pdbqt_models/$output_file.pdbqt --log $dir/docking_results/docking_logs/${output_file}.txt
+
+		python /home/pechjo00/evaluation/rmsd_rdkit.py -i $dir/docking_results/pdbqt_models/$output_file.pdbqt --input_smi $dir/docking_results/rsmd/smiles_files/$output_file.smi -r $file -s $dir/docking_results/rsmd/smiles_files/$output_file.smi -o $dir/docking_results/rsmd/rsmd_results/$output_file.txt
+	done	
+
+	python model_evaluation_2.py -p $dir/physchem_props.csv -sa $dir/sascores.csv -s tmp_res.csv -d $dir/docking_results/docking_logs/ -r $dir/docking_results/rsmd/rsmd_results/ -o $dir/results.csv
+done
+
+echo "Done"
