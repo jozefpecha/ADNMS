@@ -12,6 +12,7 @@ def get_dock_score(logs_dir):
 	for log_file in os.listdir(logs_dir):
 		with open(os.path.join(logs_dir, log_file), "r") as f:
 			for n, i in enumerate(f.readlines()):
+				# line 26 contains best docking score in all log files
 				if n == 26:
 					dock_scores.append(float(i.split()[1]))
 
@@ -52,10 +53,6 @@ def load_data(logs_dir, rmsd_dir, physchem_file, sim_scores_file, sa_scores_file
 	df["docking_scores"] = dock_scores
 	df["rmsd_scores"] = rmsd_scores
 	df["sa_scores"] = sa_scores
-
-	df = df[["Name", "Smiles", "matched_ids_count", "matched_ids", "sim_score", 'HBA', 'HBD', 'complexity', 'NumRings', 'RTB',
-			'TPSA', 'logP', 'MR', 'MW', 'Csp3', 'fmf', 'QED', 'HAC',
-			'NumRingsFused', 'N_unique_hba_hbd_atoms', 'max_ring_size','ChiralCenters', 'docking_scores', 'rmsd_scores', 'sa_scores']]
 
 	df.to_csv(output_file, index=False, sep="\t")
 
