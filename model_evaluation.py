@@ -1,6 +1,5 @@
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
-from collections import Counter
 import argparse
 import os
 
@@ -11,10 +10,12 @@ def load_mols(in_file):
 	return: lists of RDKit Mols, smiles, matched ids and matched ids count
 	"""
 	suppl = Chem.SDMolSupplier(str(in_file))
-	mols = [x for x in suppl]
-	smiles = [Chem.MolToSmiles(x, isomericSmiles=True, canonical=True) for x in mols]
-	matched_ids = [(mol.GetProp("matched_ids")) for mol in mols]
-	matched_ids_count = [(mol.GetProp("matched_ids_count")) for mol in mols]
+	mols = [mol for mol in suppl]
+	smiles, matched_ids, matched_ids_count = [], [], []
+	for mol in mols:
+		smiles.append(Chem.MolToSmiles(mol, isomericSmiles=True, canonical=True))
+		matched_ids.append(mol.GetProp("matched_ids"))
+		matched_ids_count.append(mol.GetProp("matched_ids_count"))
 
 	return mols, smiles, matched_ids, matched_ids_count
 
@@ -92,14 +93,17 @@ if __name__ == '__main__':
 	mol_names = names(mols)
 	zipped = list(zip(smiles, mol_names))
 
+	#write out a file with all smiles
 	with open(os.path.join(args.out, 'smiles.smi'), "w") as f1:
 		for n, i in enumerate(zipped):
 			f1.write(zipped[n][0] + "\t" + zipped[n][1] + "\n")
 
+	#write out smiles files for each molecule (needed for rmsd calculation)
 	for n, i in enumerate(zipped):
 		with open(os.path.join(args.out, f"docking_results/rsmd/smiles_files/{i[1]}.smi"), "w") as f:
 			f.write(i[0] + "\t" + i[1])
 
+	#write out a temporary results file with combined data
 	with open(os.path.join(args.out, 'tmp_res.csv'), "w") as f2:
 		f2.write("Name" + "\t" + "Smiles" + "\t" + "matched_ids_count" + "\t" + "matched_ids" + "\t" + "sim_score" + "\n")
 		for n in range(len(mols)):
