@@ -6,17 +6,14 @@
 #PBS -l walltime=03:00:00
 #PBS -k oe
 
-#activate your conda environment
-source activate env
-
 #path to database with generated molecules
-input_db=
+input_db="$1"
 
 #path to ouput directory
-output_dir=
+output_dir="$2"
 
 #path to reference PDB molecule (ligand from protein-ligand complex)
-ref_mol=
+ref_mol="$3"
 
 mkdir -p $output_dir
 
