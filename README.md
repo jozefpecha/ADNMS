@@ -4,8 +4,12 @@ Analysis of de novo molecular structures
 
 Automated tool for analysis of results of the CReM de novo generation tool: https://github.com/ci-lab-cz/crem-pharm.
 
-## Requirements
+## Dependencies
 RDKit [https://www.rdkit.org/docs/Install.html]
+
+Meeko: `pip install meeko`
+
+Python bindings for vina: `pip install vina`
 
 ## Usage
 The tool is implemented as a pbs file that can be run in terminal using:
