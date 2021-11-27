@@ -3,6 +3,7 @@ from rdkit.Chem import AllChem
 import argparse
 import os
 
+
 def load_mols(in_file):
 	"""
 
@@ -19,6 +20,7 @@ def load_mols(in_file):
 
 	return mols, smiles, matched_ids, matched_ids_count
 
+
 def get_fp(mols):
 	"""
 
@@ -28,6 +30,7 @@ def get_fp(mols):
 	mfp_2 = [AllChem.GetMorganFingerprintAsBitVect(x, 2) for x in mols]
 
 	return mfp_2
+
 
 def calc_similarity(ref_mol, mols):
 	"""
@@ -44,6 +47,7 @@ def calc_similarity(ref_mol, mols):
 
 	return sim_scores
 
+
 def names(mols):
 	"""
 
@@ -56,6 +60,7 @@ def names(mols):
 		id_names.append(f"F{i:06d}_{mol_names[i-1]}")
 
 	return id_names
+
 
 def get_pdbs(mols, mol_names):
 	"""
@@ -72,6 +77,7 @@ def get_pdbs(mols, mol_names):
 	
 	return None
 
+
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Extract fragment smiles')
 	parser.add_argument('-i', '--input', metavar='STRING', required=True, help='path to input sdf file')
@@ -79,31 +85,31 @@ if __name__ == '__main__':
 	parser.add_argument('-o', '--out', metavar='STRING', required=True, help='path to output directory')
 	args = parser.parse_args()
 
-	os.makedirs(os.path.join(args.out), exist_ok=True)
-	os.makedirs(os.path.join(args.out, "docking_results/pdb_files"), exist_ok=True)
-	os.makedirs(os.path.join(args.out, "docking_results/pdbqt_files"), exist_ok=True)
-	os.makedirs(os.path.join(args.out, "docking_results/pdbqt_models"), exist_ok=True)
-	os.makedirs(os.path.join(args.out, "docking_results/docking_logs"), exist_ok=True)
-	os.makedirs(os.path.join(args.out, "docking_results/rsmd/smiles_files"), exist_ok=True)
-	os.makedirs(os.path.join(args.out, "docking_results/rsmd/rsmd_results"), exist_ok=True)
-
+	pp_output = args.out
+	os.makedirs(pp_output, exist_ok=True)
+	os.makedirs(os.path.join(pp_output, "docking_results", "pdb_files"), exist_ok=True)
+	os.makedirs(os.path.join(pp_output, "docking_results", "pdbqt_files"), exist_ok=True)
+	os.makedirs(os.path.join(pp_output, "docking_results", "pdbqt_models"), exist_ok=True)
+	os.makedirs(os.path.join(pp_output, "docking_results", "docking_logs"), exist_ok=True)
+	os.makedirs(os.path.join(pp_output, "docking_results", "rsmd", "smiles_files"), exist_ok=True)
+	os.makedirs(os.path.join(pp_output, "docking_results", "rsmd", "rsmd_results"), exist_ok=True)
 
 	mols, smiles, matched_ids, matched_ids_count = load_mols(args.input)
 	sim_scores = calc_similarity(args.ref, mols)
 	mol_names = names(mols)
 	zipped = list(zip(smiles, mol_names))
 
-	#write out a file with all smiles
+	# write out a file with all smiles
 	with open(os.path.join(args.out, 'smiles.smi'), "w") as f1:
 		for n, i in enumerate(zipped):
 			f1.write(zipped[n][0] + "\t" + zipped[n][1] + "\n")
 
-	#write out smiles files for each molecule (needed for rmsd calculation)
+	# write out smiles files for each molecule (needed for rmsd calculation)
 	for n, i in enumerate(zipped):
 		with open(os.path.join(args.out, f"docking_results/rsmd/smiles_files/{i[1]}.smi"), "w") as f:
 			f.write(i[0] + "\t" + i[1])
 
-	#write out a temporary results file with combined data
+	# write out a temporary results file with combined data
 	with open(os.path.join(args.out, 'tmp_res.csv'), "w") as f2:
 		f2.write("Name" + "\t" + "Smiles" + "\t" + "matched_ids_count" + "\t" + "matched_ids" + "\t" + "sim_score" + "\n")
 		for n in range(len(mols)):
