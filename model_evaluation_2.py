@@ -2,34 +2,28 @@ import os
 import pandas as pd
 import argparse
 
-def get_dock_score(logs_dir):
+def get_dock_and_rmsd(names, logs_dir, rmsd_dir):
 	"""
-
+	
 	param logs_dir: directory with docking log files
-	return: list of best docking scores of molecules
+	param rmsd_dir: directory with rmsd scores files
+	return: dataframes with docking and rmsd scores
 	"""
 	dock_scores = []
-	for log_file in os.listdir(logs_dir):
-		with open(os.path.join(logs_dir, log_file), "r") as f:
-			for n, i in enumerate(f.readlines()):
-				# line 26 contains best docking score in all log files
-				if n == 26:
-					dock_scores.append(float(i.split()[1]))
-
-	return dock_scores
-
-def get_rmsd_score(rmsd_dir):
-	"""
-
-	param rmsd_dir: directory with rmsd scores files
-	return: list of rmsd scores corresponding to the best bidning poses
-	"""
 	rmsd_scores = []
-	for rmsd_log_file in os.listdir(rmsd_dir):
-		with open(os.path.join(rmsd_dir, rmsd_log_file), "r") as f:
-			rmsd_scores.append(float(f.readline().strip().split()[-1]))
+	for name in names:
+		with open(os.path.join(logs_dir, f'{name}.txt'), "r") as f1:
+			line = f1.readlines()[26]
+			dock_scores.append(float(line.split()[1]))
+		
+		with open(os.path.join(rmsd_dir, f'{name}.txt'), "r") as f2:
+			rmsd_scores.append(float(f2.readline().strip().split()[-1]))
+	
+	df_dock = pd.DataFrame(dock_scores, columns=['Docking_score'])
+	df_rmsd = pd.DataFrame(rmsd_scores, columns=['RMSD_score'])
 
-	return rmsd_scores
+	return df_dock, df_rmsd
+
 
 def load_data(logs_dir, rmsd_dir, physchem_file, sim_scores_file, sa_scores_file, output_file):
 	"""
@@ -44,15 +38,12 @@ def load_data(logs_dir, rmsd_dir, physchem_file, sim_scores_file, sa_scores_file
 	"""
 	physchem = pd.read_csv(physchem_file, sep="\t", index_col=False)
 	sim_scores = pd.read_csv(sim_scores_file, sep="\t", index_col=False)
-	sa_scores = pd.read_csv(sa_scores_file, sep="\t", index_col=False, header=None, usecols=[1])
+	sa_scores = pd.read_csv(sa_scores_file, sep="\t", index_col=False, names = ['Name', 'SA_score'], usecols=[1])
 
-	dock_scores = get_dock_score(logs_dir)
-	rmsd_scores = get_rmsd_score(rmsd_dir)
-
-	df = physchem.merge(sim_scores, how="outer")
-	df["docking_scores"] = dock_scores
-	df["rmsd_scores"] = rmsd_scores
-	df["sa_scores"] = sa_scores
+	dock_scores, rmsd_scores = get_dock_and_rmsd(sim_scores['Name'].tolist(), logs_dir, rmsd_dir)
+	
+	data_frames = [physchem, rmsd_scores, sa_scores]
+	df = pd.concat(data_frames, join='outer', axis=1).fillna('NaN')
 
 	df.to_csv(output_file, index=False, sep="\t")
 
