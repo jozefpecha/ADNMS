@@ -3,6 +3,8 @@ from rdkit.Chem import AllChem
 import argparse
 import os
 
+from similarity_search import calc_similarity
+
 
 def load_mols(in_file):
 	"""
@@ -31,21 +33,6 @@ def get_fp(mols):
 
 	return mfp_2
 
-
-def calc_similarity(ref_mol, mols):
-	"""
-
-	param ref_mol: path to reference molecule pdb file
-	param mols: list of RDKit Mols
-	return: list of Tanimoto scores of generated mols compared to ref mol
-	"""
-	ref = AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromPDBFile(ref_mol), 2)
-	ligands = get_fp(mols)
-
-	if ref is not None:
-		sim_scores = DataStructs.BulkTanimotoSimilarity(ref, ligands)
-
-	return sim_scores
 
 
 def names(mols):
@@ -95,7 +82,9 @@ if __name__ == '__main__':
 	os.makedirs(os.path.join(pp_output, "docking_results", "rsmd", "rsmd_results"), exist_ok=True)
 
 	mols, smiles, matched_ids, matched_ids_count = load_mols(args.input)
-	sim_scores = calc_similarity(args.ref, mols)
+	ref = AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromPDBFile(args.ref), 2)
+	ligands = get_fp(mols)
+	sim_scores = calc_similarity(ref, ligands)
 	mol_names = names(mols)
 	zipped = list(zip(smiles, mol_names))
 
