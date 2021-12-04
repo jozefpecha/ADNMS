@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+
+__author__ = 'Jozef Pecha'
+
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
 import argparse
