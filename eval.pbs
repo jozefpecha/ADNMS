@@ -6,14 +6,23 @@
 #PBS -l walltime=03:00:00
 #PBS -k oe
 
-#path to database with generated molecules
+source activate crem
+
+# path to database with generated molecules
 input_db="$1"
 
-#path to ouput directory
+# path to ouput directory
 output_dir="$2"
 
-#path to reference PDB molecule (ligand from protein-ligand complex)
+# path to reference PDB molecule (ligand from protein-ligand complex)
 ref_mol="$3"
+
+# path to pdbqt file with protein for docking
+protein="$4"
+
+# path to config file with grid box size and center coordinates
+config="$5"
+
 
 mkdir -p $output_dir
 
@@ -37,13 +46,23 @@ do
 
 	python physchem_calc.py -i $dir/smiles.smi -o $dir/physchem_props.csv
 
-	python /sa_scorer/sascorer_mp.py $dir/smiles.smi > $dir/sascores.csv
+	python sa_scorer/sascorer_mp.py $dir/smiles.smi > $dir/sascores.csv
 
-	#implenetation of docking and rmsd calculations is still missing!
+	python vina_dock.py -i $dir/new_out.sdf --no_protonation -p $protein -o $dir/docking_results.db -s $config --sdf -v --hostfile $PBS_NODEFILE
+	mkdir -p $dir/docking/docked_mols
+	mkdir -p $dir/docking/pre_docking_mols
+	mkdir -p $dir/rmsd_results
+	
+	obabel docking_results.sdf -O docking/docked_mols/mol.mol2 -m
+	obabel new_out.sdf -O docking/pre_docking_mols/mol.mol2 -m
+	
+	for file in $dir/docking/docked_mols/
+	do
+		python rmsd_rdkit.py -i $file -r $dir/docking/pre_docking_files/$file -o $dir/rmsd_results/mol.txt
 	
 	done	
 
-	python model_evaluation_2.py -p $dir/physchem_props.csv -sa $dir/sascores.csv -s tmp_res.csv -d $dir/docking_results/docking_logs/ -r $dir/docking_results/rsmd/rsmd_results/ -o $dir/results.csv
+	#python model_evaluation_2.py -p $dir/physchem_props.csv -sa $dir/sascores.csv -s tmp_res.csv -d $dir/docking_results.db -r $dir/rsmd_results/ -o $dir/results.csv
 done
 
 echo "Done"
