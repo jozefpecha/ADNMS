@@ -1,31 +1,22 @@
 import os
 import pandas as pd
 import argparse
+import sqlite3
 
-def get_dock_and_rmsd(names, logs_dir, rmsd_dir):
-	"""
-	
-	param logs_dir: directory with docking log files
-	param rmsd_dir: directory with rmsd scores files
-	return: dataframes with docking and rmsd scores
-	"""
-	dock_scores = []
-	rmsd_scores = []
-	for name in names:
-		with open(os.path.join(logs_dir, f'{name}.txt'), "r") as f1:
-			line = f1.readlines()[26]
-			dock_scores.append(float(line.split()[1]))
-		
-		with open(os.path.join(rmsd_dir, f'{name}.txt'), "r") as f2:
-			rmsd_scores.append(float(f2.readline().strip().split()[-1]))
-	
-	df_dock = pd.DataFrame(dock_scores, columns=['Docking_score'])
-	df_rmsd = pd.DataFrame(rmsd_scores, columns=['RMSD_score'])
-
-	return df_dock, df_rmsd
+def extract_docking_scores(db_file):
+	conn = sqlite3.connect(db_file)
+	cur = conn.cursor()
+    
+	query = cur.execute("SELECT id, docking_score FROM mols")
+	cols = ['Name', 'docking_score']
+	record = pd.DataFrame.from_records(data = query.fetchall(), columns=cols)
+    
+	cur.close()
+    
+	return record
 
 
-def load_data(logs_dir, rmsd_dir, physchem_file, sim_scores_file, sa_scores_file, output_file):
+def load_data(logs_db, rmsd_file, physchem_file, sim_scores_file, sa_scores_file, output_file):
 	"""
 
 	param logs_dir: directory with docking log files
@@ -38,14 +29,21 @@ def load_data(logs_dir, rmsd_dir, physchem_file, sim_scores_file, sa_scores_file
 	"""
 	physchem = pd.read_csv(physchem_file, sep="\t", index_col=False)
 	sim_scores = pd.read_csv(sim_scores_file, sep="\t", index_col=False)
-	sa_scores = pd.read_csv(sa_scores_file, sep="\t", index_col=False, names = ['Name', 'SA_score'], usecols=[1])
-
-	dock_scores, rmsd_scores = get_dock_and_rmsd(sim_scores['Name'].tolist(), logs_dir, rmsd_dir)
+	sa_scores = pd.read_csv(sa_scores_file, sep="\t", index_col=False, names = ['Name', 'SA_score'])
+	rmsd_scores = pd.read_csv(rmsd_file, sep="\t", index_col=False, names = ['Name', 'rmsd_score'], usecols=[0, 2])
 	
-	data_frames = [physchem, rmsd_scores, sa_scores]
-	df = pd.concat(data_frames, join='outer', axis=1).fillna('NaN')
+	dock_scores = extract_docking_scores(logs_db)
 
-	df.to_csv(output_file, index=False, sep="\t")
+	df1 = physchem.merge(sim_scores, how='outer', on='Name')
+	df2 = df1.merge(sa_scores, how='outer', on='Name')
+	df3 = df2.merge(rmsd_scores, how='outer', on='Name')
+	df4 = df3.merge(dock_scores, how='outer', on='Name')
+
+	df4 = df4[['Name', 'Smiles', 'sim_score', 'docking_score', 'rmsd_score', 'SA_score', 'matched_ids', 'MW', 'MR', 'HBA', 'HBD',
+        'complexity', 'NumRings', 'RTB', 'TPSA', 'logP', 'Csp3', 'fmf', 'QED', 'HAC', 'NumRingsFused', 'N_unique_hba_hbd_atoms',
+        'max_ring_size', 'ChiralCenters']]
+
+	df4.to_csv(output_file, index=False, sep="\t")
 
 	return None
 
@@ -53,8 +51,8 @@ def main():
 	parser = argparse.ArgumentParser(description='Combine data into one file')
 	parser.add_argument('-p', '--physchem', metavar='STRING', required=True, help='path to physchem props input file')
 	parser.add_argument('-s', '--sim', metavar='STRING', required=True, help='path to similarity scores input file')
-	parser.add_argument('-d', '--dock', metavar='DIRECTORY', required=True, help='path to docking scores input directory')
-	parser.add_argument('-r', '--rmsd', metavar='DIRECTORY', required=True, help='path to rmsd scores input directory')
+	parser.add_argument('-d', '--dock', metavar='FILE', required=True, help='path to docking scores database')
+	parser.add_argument('-r', '--rmsd', metavar='FILE', required=True, help='path to rmsd scores input file')
 	parser.add_argument('-sa', '--sa', metavar='STRING', required=True, help='path to sa scores input file')
 	parser.add_argument('-o', '--out', metavar='STRING', required=True, help='path to output file')
 	args = parser.parse_args()
