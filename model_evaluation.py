@@ -112,14 +112,14 @@ def main():
 		for i in list(zip(smiles, names)):
 			f1.write(i[0] + "\t" + i[1] + "\n")
 
-	# write out a temporary results file with combined data --- 
+	# write out a temporary results file with combined data --- old way of storing similarity scores
 	#with open(os.path.join(args.out, 'tmp_res.csv'), "w") as f2:
 	#	f2.write("Name" + "\t" + "Smiles" + "\t" + "matched_ids_count" + "\t" + "matched_ids" + "\t" + "sim_score" + "\n")
 	#	for n in range(len(mols)):
 	#		f2.write(smiles[n][1] + '\t' + smiles[n][0] + '\t' + str(matched_ids_count[n]) + '\t' + matched_ids[n] + '\t' + str(round(sim_scores[n], 4)) + '\n')
 	
 	if args.pdb:
-		get_pdbs(mols, mol_names)
+		get_pdbs(mols)
 
 if __name__ == '__main__':
 	main()
