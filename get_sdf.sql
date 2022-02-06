@@ -1,3 +1,7 @@
+/*
+Author: Pavel Polishchuk
+*/
+
 select group_concat(mol_block || 
 '
 >  <matched_ids>
