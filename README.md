@@ -12,9 +12,13 @@ Meeko: `pip install meeko`
 Python bindings for vina: `pip install vina`
 
 Helper rdkit scripts accesible from https://github.com/DrrDom/rdkit-scripts:
+
 physchem_calc.py
+
 vina_dock.py
+
 rmsd_rdkit.py
+
 read_input.py
 
 ## Usage
@@ -29,10 +33,15 @@ If you're using anaconda, initialize your environment before running the tool.
 
 
 The tool takes several arguments:
+
 `input_db` - path to database created by CReM tool
+
 `output_dir` - path to ouput directory
+
 `ref_mols` - path to a smi file with tab separated smiles and names of reference molecules for similarity calculations
+
 `prot_pdbqt` - pdbqt file of protein for docking
+
 `compare_dir` - optional argument for comparison of generated molecules with already existing ligands for the given protein
 
 ## Explanation
