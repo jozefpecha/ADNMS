@@ -3,6 +3,7 @@ import argparse
 import sqlite3
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
 
 def extract_docking_scores(db_file):
@@ -41,15 +42,11 @@ def load_data(logs_db, rmsd_file, physchem_file, sim_scores_file, sa_scores_file
 	df3 = df2.merge(rmsd_scores, how='outer', on='Name')
 	df4 = df3.merge(dock_scores, how='outer', on='Name')
 
-	df4 = df4[['Name', 'Smiles', 'sim_score', 'docking_score', 'rmsd_score', 'SA_score', 'matched_ids', 'MW', 'MR', 'HBA', 'HBD',
-		'complexity', 'NumRings', 'RTB', 'TPSA', 'logP', 'Csp3', 'fmf', 'QED', 'HAC', 'NumRingsFused', 'N_unique_hba_hbd_atoms',
-		'max_ring_size', 'ChiralCenters']]
-
 	df4.to_csv(os.path.join(output_dir, 'results.csv'), index=False, sep="	")
 
 	return df4
 
-def plot_docking_scores(crem_mols_data, pp_output, comaprison_data_dir = None):
+def plot_docking_scores(crem_mols_data, pp_output, logs_db, comaprison_data_dir = None):
 	"""
 	plots docking scores as a histogram
 	param crem_mols_data: a pandas dataframe with docking scores
@@ -59,55 +56,70 @@ def plot_docking_scores(crem_mols_data, pp_output, comaprison_data_dir = None):
 	"""
 
 	def get_dockscore(pp_dockscores):
-	"""
-	extracts the best docking score
-	param pp_dockscores: path to folder. The script expect that there are folders with docking results, `log` folder
-	return: list of tuples where there is molecule name on the first position and docking score on the second one
-	"""
-	df_dock = []
-	for ll in os.listdir(pp_dockscores):
-		with open(os.path.join(pp_dockscores, ll)) as f:
-			ds = f.readlines()[26]
-			df_dock.append((os.path.splitext(ll)[0], float(ds.split()[1])))
-	return df_dock
+		"""
+		extracts the best docking score
+		param pp_dockscores: path to folder. The script expect that there are folders with docking results, `log` folder
+		return: list of tuples where there is molecule name on the first position and docking score on the second one
+		"""
+		print('pp_dockscores', pp_dockscores)
+		df_dock = []
+		for ll in os.listdir(pp_dockscores):
+			if not os.path.isfile(ll):
+				with open(os.path.join(pp_dockscores, ll)) as f:
+					ds = f.readlines()[26]
+					df_dock.append((os.path.splitext(ll)[0], float(ds.split()[1])))
+			else:
+				print(f'{os.path.join(pp_dockscores, ll)} is not a file.')
+		return df_dock
 
 	def plotting(pp_dock_res, pp_output):
-	"""
-	plots docking scores if comparison data directory if specified
-	param pp_dock_res: directory with comparison molecules' docking scores in log files
-	param pp_out: path to output directory
-	"""
-	df = pd.DataFrame(columns=['name', 'dockscore', 'status'])
-	for ll in os.listdir(pp_dock_res):
-		dft = pd.DataFrame(get_dockscore(os.path.join(pp_dock_res, ll, 'log')), columns=['name', 'dockscore'])
-		dft['status'] = [ll] * dft.shape[0]
-		df = df.append(dft, sort=False)
+		"""
+		plots docking scores if comparison data directory if specified
+		param pp_dock_res: directory with comparison molecules' docking scores in log files
+		param pp_out: path to output directory
+		"""
+		df = pd.DataFrame(columns=['name', 'dockscore', 'status'])
 
-	sns.histplot(df, x="dockscore", hue="status", element="step")
-	plt.title("Distribution of docking score for active, inactive and generated molecules")
-	plt.xlabel("Docking score")
-	plt.savefig(os.path.join(pp_output, 'dock_scores_histogram.svg'))
+		#extract docking scores of crem molecules from database, assign status and append to df
+		df_gen = extract_docking_scores(logs_db)
+		df_gen.columns = ['name', 'dockscore']
+		df_gen['status'] = ['generated'] * df_gen.shape[0]
+		df = df.append(df_gen, sort=False)
 
-	return None
+
+		for ll in os.listdir(pp_dock_res):
+			dft = pd.DataFrame(get_dockscore(os.path.join(pp_dock_res, ll)), columns=['name', 'dockscore'])
+			dft['status'] = [ll] * dft.shape[0]
+			df = df.append(dft, sort=False)
+
+		df.reset_index(drop=True, inplace=True)
+
+		sns.kdeplot(x=df['dockscore'], hue=df['status'])
+		plt.title("Distribution of docking score for active, inactive and generated molecules")
+		plt.xlabel("Docking score")
+		#plt.tight_layout()
+		plt.savefig(os.path.join(pp_output, 'dock_scores_histogram.svg'))
+
+		return None
 
 	# if no comparison data, plots a simple histogram of dock scores of generated molecules
-	if comaprison_data_dir = None:
-		sns.histplot(data=crem_mols_data['docking_score'], kde=True, element='step')
+	if comaprison_data_dir is None:
+		sns.histplot(data=crem_mols_data['docking_score'], kde=True)
 		plt.title('Distribution of docking score for generated molecules')
 		plt.xlabel('Docking score')
+		plt.tight_layout()
 		plt.savefig(os.path.join(pp_output, 'dock_scores_histogram.svg'))
 		return None
 
 	elif comaprison_data_dir is not None:
 		if os.path.isdir(comaprison_data_dir):
 			if not os.listdir(comaprison_data_dir):
-				print('Specified directory is empty.')
+				print(f'{comaprison_data_dir} directory is empty.')
 				return None
 			else:
-				pp_dock_res = get_dockscore(comaprison_data_dir)
-				plotting(pp_dock_res, pp_out)
+				plotting(comaprison_data_dir, pp_output)
 		else:
-			print('Provided path is not a directory.')
+			print(f'{comparison_data_dir} is not a directory.')
 			return None
 
 def main():
@@ -122,7 +134,7 @@ def main():
 	args = parser.parse_args()
 
 	data = load_data(args.dock, args.rmsd, args.physchem, args.sim, args.sa, args.out)
-	plot_docking_scores(data, args.out, comaprison_data_dir=args.compare)
+	plot_docking_scores(data, args.out, logs_db=args.dock, comaprison_data_dir=args.compare)
 
 if __name__ == '__main__':
 	main()

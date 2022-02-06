@@ -16,6 +16,7 @@ def calc_similarity(ref_fp, fps):
     if not ref_fp:
         return None
     sim_scores = DataStructs.BulkTanimotoSimilarity(ref_fp, fps)
+    [round(x, 5) for x in sim_scores]
     return sim_scores
 
 

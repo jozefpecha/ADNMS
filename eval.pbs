@@ -11,13 +11,22 @@ source activate crem
 cd /home/pechjo00/test_pipeline/
 
 #path to database with generated molecules
-input_db="/home/pechjo00/test_pipeline/res.db"
+#input_db="/home/pechjo00/test_pipeline/res.db"
+input_db=" "
 
 #path to ouput directory
-output_dir="/home/pechjo00/test_pipeline/results"
+#output_dir="/home/pechjo00/test_pipeline/results"
+output_dir=" "
 
-#path to reference PDB molecule (ligand from protein-ligand complex)
-ref_mol="/home/pechjo00/test_pipeline/2btr_A_ligand.pdb"
+#path to reference molecules (ligand from protein-ligand complex) --> change to folder with protein, log, and smiles of reference
+#ref_mols="/home/pechjo00/test_pipeline/2btr_A_ligand.txt"
+ref_mols=" "
+
+prot_pdbqt=" "
+
+compare_dir="None"
+
+
 
 mkdir -p $output_dir
 
@@ -37,17 +46,19 @@ for dir in $output_dir/*/
 do
 	dir=${dir%*/}
 
-	python model_evaluation.py -i $dir/*.sdf -o $dir -r $ref_mol
+	python model_evaluation.py -i $dir/partial.sdf -o $dir -r $ref_mols
 
 	python physchem_calc.py -i $dir/smiles.smi -o $dir/physchem_props.csv
 
 	python sa_scorer/sascorer_mp.py $dir/smiles.smi > $dir/sascores.csv
 
-	python vina_dock.py -i $dir/new_out.sdf --no_protonation -p 2btr_A.pdbqt -o $dir/docking_results.db -s 2btr_A.log --sdf -v
+	python vina_dock.py -i $dir/*.sdf -p $prot_pdbqt -o $dir/docking_results.db -s $dock_log --sdf -v
 		
-	python rmsd_rdkit.py -i $dir/docking_results.sdf -r $dir/new_out.sdf -o $dir/rmsd_results.csv
+	python rmsd_rdkit.py -i $dir/docking_results.sdf -r $dir/partial.sdf -o $dir/rmsd_results.csv
 
-	python model_evaluation_2.py -p $dir/physchem_props.csv -sa $dir/sascores.csv -s tmp_res.csv -d $dir/docking_results.db -r $dir/rsmd_results.csv -o $dir/results.csv
+	python model_evaluation_2.py -p $dir/physchem_props.csv -sa $dir/sascores.csv -s similarity_scores.csv -d $dir/docking_results.db -r $dir/rsmd_results.csv -o $dir/results.csv -c $compare_dir
+
+	python get_top_10_mols.py -i $dir
 done
 
 echo "Done"
