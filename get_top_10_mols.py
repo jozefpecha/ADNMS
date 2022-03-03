@@ -9,6 +9,7 @@ def get_mol_names(results_file):
 	df = pd.read_csv(results_file, sep="	", index_col=False)
 
 	df_sorted = df.sort_values(by='docking_score')
+	df_sorted = df_sorted['docking_score'] > -20
 	df_top = df_sorted.head(10)
 
 	mol_names = df_top['Name'].tolist()
