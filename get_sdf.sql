@@ -14,5 +14,5 @@ $$$$
 ') || '
 
 $$$$
-'from res 
-where rowid in (select min(rowid) from res where visited_ids_count = (select max(visited_ids_count) from res) group by mol_id)
+'from mols 
+where rowid in (select min(rowid) from mols where visited_ids_count = (select max(visited_ids_count) from mols) group by id)
