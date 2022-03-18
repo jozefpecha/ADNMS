@@ -76,11 +76,12 @@ def analyze_data(combined_results, out_folder, db_dir=None):
 	for n in range(n_features+1):
 		dict_name = f'feature_stats_N-{n}'
 		tmp_dict = {}
-		tmp_dict[f'N-{n}_mols']=int((combined_results.matched_ids_count==(max_features-n)).sum())
-		tmp_dict[f'N-{n}_MW<450']=int(((combined_results.matched_ids_count==(max_features-n) & (combined_results.MW<450)).sum()))
-		tmp_dict[f'N-{n}_MW<450_&_RMSD<=2']=int(((combined_results.matched_ids_count==(max_features-n) & (combined_results.MW<450) & (combined_results.rmsd_score<=2)).sum()))
-		tmp_dict[f'N-{n}_MW<450_&_logP<=4']=int(((combined_results.matched_ids_count==(max_features-n) & (combined_results.MW<450) & (combined_results.logP<=4)).sum()))
-		tmp_dict[f'N-{n}_MW<450_&_RMSD<=2_&_logP<=4']=int(((combined_results.matched_ids_count==(max_features-n) & (combined_results.MW<450) & (combined_results.logP<=4) & (combined_results.rmsd_score<=2)).sum()))
+		tmp_dict[f'N-{n}_mols']=int(combined_results.query(f'matched_ids_count==({max_features}-{n}').shape[0])
+		tmp_dict[f'N-{n}_MW<450']=int(combined_results.query(f'matched_ids_count==({max_features}-{n}) & MW<450').shape[0])
+		tmp_dict[f'N-{n}_MW<450_&_RMSD<=2']=int(combined_results.query(f'matched_ids_count==({max_features}-{n}) & MW<450 & rmsd_score<=2').shape[0])
+		tmp_dict[f'N-{n}_MW<450_&_logP<=4']=int(combined_results.query(f'matched_ids_count==({max_features}-{n}) & MW<450 & logP<=4').shape[0])
+		tmp_dict[f'N-{n}_MW<450_&_RMSD<=2_&_logP<=4']=int(combined_results.query(f'matched_ids_count==({max_features}-{n}) & MW<450 & logP<=4 & rmsd_score<=2').shape[0])
+
 		
 		generated_molecules += tmp_dict[f'N-{n}_mols']
 		
