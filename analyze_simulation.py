@@ -40,7 +40,7 @@ def extract_enumerated_mols(db_file):
 	
 	return record
 
-def analyze_data(combined_results, out_folder, db_dir=None):
+def analyze_data(combined_results, out_folder, res_dir, db_dir=None):
 	json_list = []
 
 	if db_dir != None:
@@ -88,7 +88,7 @@ def analyze_data(combined_results, out_folder, db_dir=None):
 		dict_list = {dict_name: tmp_dict}
 		list_of_dicts.append(dict_list)
 	
-	json_list.append({'max_features': max_features, 'simulation_time': time, 'enumerated_mols': enumerated_mols, 'generated_molecules': generated_molecules})
+	json_list.append({'simulation': os.path.basename(res_dir), 'max_features': max_features, 'simulation_time': time, 'enumerated_mols': enumerated_mols, 'generated_molecules': generated_molecules})
 	json_list.append(list_of_dicts)
 
 	out_file_summary=os.path.join(out_folder, 'summary.json')
@@ -103,7 +103,7 @@ def main():
 	args = parser.parse_args()
 
 	combined_results = get_data(args.out_folder, args.res_dir)
-	analyze_data(combined_results, args.out_folder, args.db_dir)
+	analyze_data(combined_results, args.out_folder, args.res_dir, args.db_dir)
 
 if __name__ == '__main__':
 	main()
