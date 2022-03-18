@@ -63,6 +63,9 @@ def analyze_data(combined_results, out_folder, db_dir=None):
 				print(f'{sim_time_dir} is not a directory! Skipping enumerated mols evaluation.')
 		else:
 			raise Exception(f'{db_dir} is not a directory!')
+	else:
+		time=None
+		enumerated_mols=None
 
 	max_features=combined_results.matched_ids_count.max()
 	n_features=max_features-combined_results.matched_ids_count.min()
