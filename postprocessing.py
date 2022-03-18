@@ -46,7 +46,7 @@ def load_data(logs_db, rmsd_file, physchem_file, sim_scores_file, sa_scores_file
 
 	return df4
 
-def plot_docking_scores(crem_mols_data, pp_output, logs_db, comaprison_data_dir = None):
+def plot_docking_scores(crem_mols_data, pp_output, logs_db, comaprison_data_dir):
 	"""
 	plots docking scores as a histogram
 	param crem_mols_data: a pandas dataframe with docking scores
@@ -130,8 +130,10 @@ def main():
 	parser.add_argument('-r', '--rmsd', metavar='FILE', required=True, help='path to rmsd scores input file')
 	parser.add_argument('-sa', '--sa', metavar='STRING', required=True, help='path to sa scores input file')
 	parser.add_argument('-o', '--out', metavar='DIRECTORY', required=True, help='path to output directory')
-	parser.add_argument('-c', '--compare', metavar='DIRECTORY', required=False, default=None, help='path to directory with docking logs for comparison')
+	parser.add_argument('-c', '--compare', metavar='DIRECTORY', required=False, help='path to directory with docking logs for comparison')
 	args = parser.parse_args()
+
+	args.compare = None if args.compare == 'None' else args.compare
 
 	data = load_data(args.dock, args.rmsd, args.physchem, args.sim, args.sa, args.out)
 	plot_docking_scores(data, args.out, logs_db=args.dock, comaprison_data_dir=args.compare)

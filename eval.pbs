@@ -8,22 +8,25 @@
 
 source activate crem
 
-cd /home/pechjo00/test_pipeline/
+cd /home/pechjo00/
 
 #path to database with generated molecules
 #input_db="/home/pechjo00/test_pipeline/res.db"
-input_db=" "
+input_dir=" "
 
 #path to ouput directory
-#output_dir="/home/pechjo00/test_pipeline/results"
 output_dir=" "
 
-#path to reference molecules (ligand from protein-ligand complex) --> change to folder with protein, log, and smiles of reference
-#ref_mols="/home/pechjo00/test_pipeline/2btr_A_ligand.txt"
+#path to reference molecules
 ref_mols=" "
 
+#path to reference protein pdbqt file
 prot_pdbqt=" "
 
+#path to config file for docking
+dock_log=" "
+
+#path to directory with comparison molecules
 compare_dir="None"
 
 
@@ -31,7 +34,7 @@ compare_dir="None"
 mkdir -p $output_dir
 
 # extract mols from db with visited_ids_count = max(visited_ids_count)
-sqlite3 $input_db < get_sdf.sql > $output_dir/out.sdf
+sqlite3 $input_dir/res.db < get_sdf.sql > $output_dir/out.sdf
 
 # check if out.sdf is empty
 #if ! grep -q '[^[:space:]]' "$output_dir/out.sdf"; then
@@ -46,19 +49,21 @@ for dir in $output_dir/*/
 do
 	dir=${dir%*/}
 
-	python model_evaluation.py -i $dir/partial.sdf -o $dir -r $ref_mols
+	python preprocessing.py -i $dir/partial.sdf -o $dir -r $ref_mols
 
 	python physchem_calc.py -i $dir/smiles.smi -o $dir/physchem_props.csv
 
 	python sa_scorer/sascorer_mp.py $dir/smiles.smi > $dir/sascores.csv
 
-	python vina_dock.py -i $dir/*.sdf -p $prot_pdbqt -o $dir/docking_results.db -s $dock_log --sdf -v
+	python vina_dock.py -i $dir/partial.sdf -p $prot_pdbqt -o $dir/docking_results.db -s $dock_log -c 128 --sdf -v
 		
 	python rmsd_rdkit.py -i $dir/docking_results.sdf -r $dir/partial.sdf -o $dir/rmsd_results.csv
 
-	python model_evaluation_2.py -p $dir/physchem_props.csv -sa $dir/sascores.csv -s similarity_scores.csv -d $dir/docking_results.db -r $dir/rsmd_results.csv -o $dir/results.csv -c $compare_dir
+	python postprocessing.py -p $dir/physchem_props.csv -sa $dir/sascores.csv -s $dir/similarity_scores.csv -d $dir/docking_results.db -r $dir/rmsd_results.csv -o $dir/results.csv -o $dir -c $compare_dir
 
 	python get_top_10_mols.py -i $dir
+
+	python analyze_simulation.py -i $output_dir -o output_dir -db $input_dir
 done
 
 echo "Done"

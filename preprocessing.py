@@ -17,7 +17,7 @@ def load_mols(in_file, out_file):
 	mols = [mol for mol in suppl]
 	names, smiles, matched_ids, matched_ids_count = [], [], [], []
 	for mol in mols:
-		names.append(new_name)
+		names.append(mol.GetProp('_Name'))
 		smiles.append(Chem.MolToSmiles(mol, isomericSmiles=True, canonical=True))		
 		matched_ids.append(mol.GetProp("matched_ids"))
 		matched_ids_count.append(mol.GetProp("matched_ids_count"))
